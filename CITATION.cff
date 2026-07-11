@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it as below."
+authors:
+  - family-names: Singh
+    given-names: Khushwant
+title: "Interpretable Machine Learning-Based QSAR Framework for Anti-Leishmanial Drug Discovery"
+version: 1.0
+date-released: 2026-07-11
+url: "https://github.com/your-username/your-repository"
