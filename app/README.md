@@ -1,0 +1,27 @@
+QSAR Predictor Streamlit App
+============================
+
+Run locally (from the repository root):
+
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+Windows shortcut:
+- Double-click `run_app.bat` to start the app with the project virtual environment.
+
+Notes:
+- The app works out of the box by loading `results/model.joblib`; if that file is missing, it trains a fallback random forest from the processed repository data.
+- Feature generation is aligned to the loaded model schema. The bundled model uses 11 molecular descriptors plus 1024 Morgan fingerprint bits.
+- You can provide your own trained model by placing it at `results/model.joblib` or uploading a `.joblib` / `.pkl` file in the sidebar.
+- Single-compound predictions include descriptor checks, a molecule rendering, SHAP interpretation, and an HTML report export.
+- Batch predictions accept a CSV upload or public CSV URL with a `smiles` column and export the prediction table as CSV.
+- PDF export still requires `wkhtmltopdf` and the optional `pdfkit` package if you add PDF generation.
+
+Providing data or model:
+- To run batch predictions you can upload a CSV with a `smiles` column, or paste a public CSV URL into the app (for example a raw GitHub link or an S3/HTTP URL).
+- You can supply a trained model either by placing `model.joblib` in `results/` or by uploading the `.joblib` file directly in the UI.
+
+Security note:
+- When using public URLs, ensure the link points to a trusted CSV; the app will download and parse it locally.
