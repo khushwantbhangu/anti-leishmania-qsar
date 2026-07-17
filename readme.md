@@ -1,6 +1,7 @@
 # Anti-leishmania QSAR
 
 This repository contains a QSAR workflow and Streamlit app for estimating anti-leishmanial activity from molecular structure. The workflow combines ChEMBL-derived bioactivity curation, molecular descriptors, Morgan fingerprints, regression models, applicability-domain checks, activity-cliff analysis, scaffold analysis, and SHAP interpretation.
+https://doi.org/10.5281/zenodo.21418535
 
 ## Web app
 
