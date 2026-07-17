@@ -9,14 +9,16 @@ streamlit run app/streamlit_app.py
 ```
 
 Windows shortcut:
-- Double-click `run_app.bat` to start the app with the project virtual environment.
+- Double-click `run_app.bat` from the repository root. It creates `.venv` if needed, installs dependencies, and starts the app.
 
 Notes:
-- The app works out of the box by loading `results/model.joblib`; if that file is missing, it trains a fallback random forest from the processed repository data.
-- Feature generation is aligned to the loaded model schema. The bundled model uses 11 molecular descriptors plus 1024 Morgan fingerprint bits.
+- The app works out of the box by loading the model registry in `results/model_registry.joblib`.
+- Feature generation is aligned to the loaded model schema. The bundled registry uses 11 molecular descriptors plus 1024 Morgan fingerprint bits.
+- The default model is a consensus ensemble; individual registered models can also be selected.
+- Reliability output includes applicability-domain status, nearest known analogs, descriptor warnings, model spread, and drug-likeness flags.
 - You can provide your own trained model by placing it at `results/model.joblib` or uploading a `.joblib` / `.pkl` file in the sidebar.
-- Single-compound predictions include descriptor checks, a molecule rendering, SHAP interpretation, and an HTML report export.
-- Batch predictions accept a CSV upload or public CSV URL with a `smiles` column and export the prediction table as CSV.
+- Single-compound predictions include descriptor checks, a molecule rendering, SHAP interpretation, nearest analogs, model agreement, and an HTML report export.
+- Batch predictions accept a CSV upload or public CSV URL with a `smiles` column and export ranked screening results as CSV.
 - PDF export still requires `wkhtmltopdf` and the optional `pdfkit` package if you add PDF generation.
 
 Providing data or model:

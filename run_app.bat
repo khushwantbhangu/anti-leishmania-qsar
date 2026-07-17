@@ -3,7 +3,8 @@ cd /d "%~dp0"
 
 set PYTHON_EXE=%~dp0\.venv\Scripts\python.exe
 if not exist "%PYTHON_EXE%" (
-    set PYTHON_EXE=python
+    python -m venv .venv
+    set PYTHON_EXE=%~dp0\.venv\Scripts\python.exe
 )
 
 "%PYTHON_EXE%" -m pip install -r requirements.txt

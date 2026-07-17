@@ -1,0 +1,59 @@
+{
+  "created_at": "2026-07-12T21:30:29.947828+00:00",
+  "target": "pIC50",
+  "samples": 5457,
+  "features": 1035,
+  "default_model": "Consensus ensemble",
+  "best_single_model": "Extra trees",
+  "applicability_domain": {
+    "descriptor_nn_distance_95": 1.2404394948435902,
+    "tanimoto_similarity_05": 0.34782608695652173
+  },
+  "metrics": [
+    {
+      "model_key": "consensus",
+      "model": "Consensus ensemble",
+      "r2": 0.6288943756603971,
+      "mae": 0.37389515931131845,
+      "rmse": 0.525454249151656,
+      "cv_r2_mean": 0.6281725192394497,
+      "cv_r2_sd": 0.01336466278210241
+    },
+    {
+      "model_key": "extra_trees",
+      "model": "Extra trees",
+      "r2": 0.6232613418162025,
+      "mae": 0.3634538909820836,
+      "rmse": 0.5294271798922551,
+      "cv_r2_mean": 0.6207557770055482,
+      "cv_r2_sd": 0.014929296472461806
+    },
+    {
+      "model_key": "random_forest",
+      "model": "Random forest",
+      "r2": 0.6091724162107834,
+      "mae": 0.38500402894992064,
+      "rmse": 0.5392358330495276,
+      "cv_r2_mean": 0.604701009984655,
+      "cv_r2_sd": 0.01349840567719031
+    },
+    {
+      "model_key": "hist_gradient_boosting",
+      "model": "Histogram gradient boosting",
+      "r2": 0.5982276175622305,
+      "mae": 0.40265720693932605,
+      "rmse": 0.5467341232755353,
+      "cv_r2_mean": 0.59801605941931,
+      "cv_r2_sd": 0.01731145994819287
+    },
+    {
+      "model_key": "ridge",
+      "model": "Ridge regression",
+      "r2": 0.49865852438107194,
+      "mae": 0.4626014812915929,
+      "rmse": 0.6107352086761814,
+      "cv_r2_mean": 0.4856518879552783,
+      "cv_r2_sd": 0.01703772677412486
+    }
+  ]
+}

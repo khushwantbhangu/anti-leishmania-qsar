@@ -6,4 +6,11 @@ authors:
 title: "Interpretable Machine Learning-Based QSAR Framework for Anti-Leishmanial Drug Discovery"
 version: 1.0
 date-released: 2026-07-11
-url: "https://github.com/your-username/your-repository"
+abstract: "A reproducible QSAR workflow and Streamlit application for anti-leishmanial activity prediction using molecular descriptors, Morgan fingerprints, model validation, and SHAP-based interpretation."
+keywords:
+  - QSAR
+  - leishmaniasis
+  - machine learning
+  - cheminformatics
+  - Streamlit
+license: MIT

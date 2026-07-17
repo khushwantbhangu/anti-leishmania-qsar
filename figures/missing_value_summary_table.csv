@@ -1,0 +1,15 @@
+column,non_null_count,completeness_percent,status
+Molecule ChEMBL ID,5457,100.0,complete
+SMILES,5457,100.0,complete
+pIC50,5457,100.0,complete
+Molecular_Weight,5457,100.0,complete
+AlogP,5457,100.0,complete
+TPSA,5457,100.0,complete
+HBA,5457,100.0,complete
+HBD,5457,100.0,complete
+RO5_Violations,5457,100.0,complete
+Rotatable_Bonds,5457,100.0,complete
+QED,5457,100.0,complete
+Aromatic_Rings,5457,100.0,complete
+Heavy_Atoms,5457,100.0,complete
+NP_Likeness,5457,100.0,complete

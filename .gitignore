@@ -1,12 +1,15 @@
 # Virtual environment
 venv/
+.venv/
 
 # Python cache
 __pycache__/
+**/__pycache__/
 *.py[cod]
 
 # Jupyter
 .ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
 # Model training artifacts
 catboost_info/
@@ -20,15 +23,23 @@ Thumbs.db
 # Logs
 *.log
 
+# Codex/local agent tooling
+.agents/
+
 # VS Code settings
 .vscode/
 
 # Environment variables
 .env
+.streamlit/secrets.toml
+
+# Local exports and scratch outputs
+*.tmp
+*.bak
+*_report.html
+predictions.csv
+tmp/
 
 # Build files
 dist/
 build/
-
-# Temporary files
-*.tmp

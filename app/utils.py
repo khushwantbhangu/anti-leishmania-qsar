@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import html
 import io
+import json
+import contextlib
 from functools import lru_cache
 from pathlib import Path
 from typing import BinaryIO
@@ -33,6 +35,8 @@ DESCRIPTOR_COLUMNS = [
 ]
 DEFAULT_FINGERPRINT_BITS = 1024
 DEFAULT_RADIUS = 2
+MODEL_REGISTRY_PATH = "results/model_registry.joblib"
+APPLICABILITY_DOMAIN_PATH = "results/applicability_domain.joblib"
 
 
 def _project_root() -> Path:
@@ -41,7 +45,8 @@ def _project_root() -> Path:
 
 @lru_cache(maxsize=1)
 def _np_model():
-    return npscorer.readNPModel()
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return npscorer.readNPModel()
 
 
 def parse_smiles(smiles: str):
@@ -53,6 +58,11 @@ def parse_smiles(smiles: str):
     if mol is None:
         raise ValueError("Invalid SMILES. Check the molecule syntax and try again.")
     return clean, mol
+
+
+def canonicalize_smiles(smiles: str) -> str:
+    _, mol = parse_smiles(smiles)
+    return Chem.MolToSmiles(mol, isomericSmiles=True)
 
 
 def compute_descriptors(mol) -> pd.DataFrame:
@@ -204,42 +214,331 @@ def load_model(
     return joblib.load(path)
 
 
+def load_model_registry(path: str | Path | None = None) -> dict | None:
+    registry_path = _project_root() / MODEL_REGISTRY_PATH if path is None else Path(path)
+    if not registry_path.is_absolute():
+        registry_path = (_project_root() / registry_path).resolve()
+    if not registry_path.exists():
+        return None
+    return joblib.load(registry_path)
+
+
+def load_applicability_domain(path: str | Path | None = None) -> dict | None:
+    ad_path = _project_root() / APPLICABILITY_DOMAIN_PATH if path is None else Path(path)
+    if not ad_path.is_absolute():
+        ad_path = (_project_root() / ad_path).resolve()
+    if not ad_path.exists():
+        return None
+    return joblib.load(ad_path)
+
+
+def load_model_comparison() -> pd.DataFrame:
+    path = _project_root() / "results" / "model_comparison_metrics.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_model_card() -> dict:
+    path = _project_root() / "results" / "model_card.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def model_options(registry: dict | None) -> dict[str, str]:
+    if not registry:
+        return {}
+    return {
+        key: entry.get("label", key)
+        for key, entry in registry.get("models", {}).items()
+    }
+
+
+def estimator_from_registry(registry: dict, model_key: str | None = None):
+    if not registry:
+        raise ValueError("Model registry is not available.")
+    key = model_key or registry.get("default_model_key") or registry.get("best_model_key")
+    models = registry.get("models", {})
+    if key not in models:
+        raise ValueError(f"Model '{key}' was not found in the registry.")
+    return models[key]["estimator"]
+
+
+def registry_model_metadata(registry: dict | None, model_key: str | None) -> dict:
+    if not registry or not model_key:
+        return {}
+    return registry.get("models", {}).get(model_key, {})
+
+
 def predict(model, features: pd.DataFrame) -> float:
     ready = align_features_to_model(features, model)
     pred = model.predict(ready)
     return float(pred[0])
 
 
-def explain_shap(model, features: pd.DataFrame, top_k: int = 20) -> dict:
-    try:
-        ready = align_features_to_model(features, model)
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(ready, check_additivity=False)
-        values = np.asarray(shap_values)
+def model_prediction_panel(registry: dict | None, features: pd.DataFrame) -> pd.DataFrame:
+    if not registry:
+        return pd.DataFrame()
 
-        if values.ndim == 3:
-            values = values[0, :, 0]
-        elif values.ndim == 2:
-            values = values[0]
-
-        importance = (
-            pd.DataFrame(
+    rows = []
+    for key, entry in registry.get("models", {}).items():
+        try:
+            estimator = entry["estimator"]
+            ready = align_features_to_model(features, estimator)
+            rows.append(
                 {
-                    "feature": ready.columns.astype(str),
-                    "mean_abs_shap": np.abs(values).reshape(-1),
+                    "model_key": key,
+                    "model": entry.get("label", key),
+                    "pIC50": float(estimator.predict(ready)[0]),
+                    "r2": entry.get("metrics", {}).get("r2"),
+                    "mae": entry.get("metrics", {}).get("mae"),
+                    "rmse": entry.get("metrics", {}).get("rmse"),
                 }
             )
-            .sort_values("mean_abs_shap", ascending=False)
-            .head(int(top_k))
-            .sort_values("mean_abs_shap", ascending=True)
-        )
-        return {"importance": importance, "raw_shap": shap_values}
-    except Exception as exc:
-        return {"error": str(exc)}
+        except Exception as exc:
+            rows.append(
+                {
+                    "model_key": key,
+                    "model": entry.get("label", key),
+                    "pIC50": np.nan,
+                    "error": str(exc),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def prediction_interval(model, features: pd.DataFrame) -> dict:
+    ready = align_features_to_model(features, model)
+
+    if hasattr(model, "estimators_"):
+        tree_predictions = []
+        estimators = getattr(model, "estimators_", [])
+        for estimator in estimators:
+            if isinstance(estimator, tuple):
+                estimator = estimator[1]
+            try:
+                tree_predictions.append(float(estimator.predict(ready)[0]))
+            except Exception:
+                pass
+        if len(tree_predictions) >= 2:
+            values = np.asarray(tree_predictions, dtype=float)
+            return {
+                "lower": float(np.quantile(values, 0.05)),
+                "upper": float(np.quantile(values, 0.95)),
+                "std": float(values.std()),
+                "source": "ensemble_members",
+            }
+
+    return {"lower": np.nan, "upper": np.nan, "std": np.nan, "source": "unavailable"}
+
+
+def _candidate_shap_estimators(model):
+    yield model
+    named_estimators = getattr(model, "named_estimators_", None)
+    if isinstance(named_estimators, dict):
+        for estimator in named_estimators.values():
+            yield estimator
+    for estimator in getattr(model, "estimators_", []):
+        if isinstance(estimator, tuple):
+            estimator = estimator[1]
+        yield estimator
+
+
+def explain_shap(model, features: pd.DataFrame, top_k: int = 20) -> dict:
+    last_error = None
+    for candidate in _candidate_shap_estimators(model):
+        try:
+            ready = align_features_to_model(features, candidate)
+            explainer = shap.TreeExplainer(candidate)
+            shap_values = explainer.shap_values(ready, check_additivity=False)
+            values = np.asarray(shap_values)
+
+            if values.ndim == 3:
+                values = values[0, :, 0]
+            elif values.ndim == 2:
+                values = values[0]
+
+            importance = (
+                pd.DataFrame(
+                    {
+                        "feature": ready.columns.astype(str),
+                        "mean_abs_shap": np.abs(values).reshape(-1),
+                    }
+                )
+                .sort_values("mean_abs_shap", ascending=False)
+                .head(int(top_k))
+                .sort_values("mean_abs_shap", ascending=True)
+            )
+            return {
+                "importance": importance,
+                "raw_shap": shap_values,
+                "model_used": candidate.__class__.__name__,
+            }
+        except Exception as exc:
+            last_error = exc
+
+    try:
+        message = str(last_error) if last_error else "No compatible estimator was available for SHAP."
+    except Exception:
+        message = "No compatible estimator was available for SHAP."
+    return {"error": message}
 
 
 def pIC50_to_ic50_nm(prediction: float) -> float:
     return float(10 ** (9 - prediction))
+
+
+def activity_class(prediction: float) -> str:
+    if prediction >= 7:
+        return "high"
+    if prediction >= 6:
+        return "moderate"
+    if prediction >= 5:
+        return "weak"
+    return "low"
+
+
+def property_flags(features: pd.DataFrame) -> dict:
+    descriptors = features.loc[:, [col for col in DESCRIPTOR_COLUMNS if col in features.columns]].iloc[0]
+    ro5_violations = int(descriptors["RO5_Violations"])
+    flags = {
+        "lipinski_pass": ro5_violations == 0,
+        "ro5_violations": ro5_violations,
+        "high_lipophilicity": bool(descriptors["AlogP"] > 5),
+        "high_molecular_weight": bool(descriptors["Molecular_Weight"] > 500),
+        "low_qed": bool(descriptors["QED"] < 0.35),
+        "high_tpsa": bool(descriptors["TPSA"] > 140),
+    }
+    warnings = []
+    if not flags["lipinski_pass"]:
+        warnings.append(f"{ro5_violations} Lipinski rule-of-five violation(s)")
+    if flags["low_qed"]:
+        warnings.append("Low QED drug-likeness")
+    if flags["high_tpsa"]:
+        warnings.append("High polar surface area")
+    flags["warnings"] = warnings
+    return flags
+
+
+def tanimoto_similarity_to_training(features: pd.DataFrame, ad: dict) -> tuple[np.ndarray, np.ndarray]:
+    fingerprint_columns = ad["fingerprint_columns"]
+    query = features.loc[:, fingerprint_columns].to_numpy(dtype=bool)[0]
+    training = np.asarray(ad["fingerprints"], dtype=bool)
+    intersection = np.logical_and(query, training).sum(axis=1)
+    union = np.logical_or(query, training).sum(axis=1)
+    similarity = np.divide(
+        intersection,
+        union,
+        out=np.zeros_like(intersection, dtype=float),
+        where=union != 0,
+    )
+    order = np.argsort(-similarity)
+    return similarity, order
+
+
+def descriptor_distance_to_training(features: pd.DataFrame, ad: dict) -> tuple[np.ndarray, np.ndarray]:
+    descriptor_columns = ad["descriptor_columns"]
+    scaler = ad["descriptor_scaler"]
+    training_frame = pd.DataFrame(ad["descriptors"], columns=descriptor_columns)
+    training = scaler.transform(training_frame)
+    query = scaler.transform(features.loc[:, descriptor_columns].astype(float))
+    distances = np.linalg.norm(training - query[0], axis=1)
+    order = np.argsort(distances)
+    return distances, order
+
+
+def applicability_report(features: pd.DataFrame, ad: dict | None, top_n: int = 5) -> dict:
+    if not ad:
+        return {
+            "available": False,
+            "in_domain": None,
+            "confidence": "unknown",
+            "warnings": ["Applicability-domain artifact is not available."],
+            "neighbors": pd.DataFrame(),
+        }
+
+    similarity, similarity_order = tanimoto_similarity_to_training(features, ad)
+    distances, distance_order = descriptor_distance_to_training(features, ad)
+    descriptor_ranges = ad.get("descriptor_ranges", {})
+
+    descriptor_outliers = []
+    for column, ranges in descriptor_ranges.items():
+        value = float(features[column].iloc[0])
+        if value < ranges["q01"] or value > ranges["q99"]:
+            descriptor_outliers.append(
+                {
+                    "descriptor": column,
+                    "value": value,
+                    "reference_q01": ranges["q01"],
+                    "reference_q99": ranges["q99"],
+                }
+            )
+
+    max_similarity = float(similarity[similarity_order[0]])
+    nearest_distance = float(distances[distance_order[0]])
+    tanimoto_threshold = ad["thresholds"]["tanimoto_similarity_05"]
+    descriptor_threshold = ad["thresholds"]["descriptor_nn_distance_95"]
+
+    in_domain = (
+        max_similarity >= tanimoto_threshold
+        and nearest_distance <= descriptor_threshold
+        and len(descriptor_outliers) <= 2
+    )
+
+    warnings = []
+    if max_similarity < tanimoto_threshold:
+        warnings.append("Low structural similarity to the training set")
+    if nearest_distance > descriptor_threshold:
+        warnings.append("Descriptor profile is distant from the training distribution")
+    if descriptor_outliers:
+        warnings.append(f"{len(descriptor_outliers)} descriptor(s) outside the central training range")
+
+    neighbor_rows = []
+    for idx in similarity_order[:top_n]:
+        neighbor_rows.append(
+            {
+                "Molecule ChEMBL ID": ad["molecule_ids"][idx],
+                "SMILES": ad["smiles"][idx],
+                "known_pIC50": float(ad["pIC50"][idx]),
+                "tanimoto_similarity": float(similarity[idx]),
+                "descriptor_distance": float(distances[idx]),
+            }
+        )
+
+    return {
+        "available": True,
+        "in_domain": bool(in_domain),
+        "confidence": "high" if in_domain and max_similarity >= 0.55 else ("medium" if in_domain else "low"),
+        "max_tanimoto_similarity": max_similarity,
+        "nearest_descriptor_distance": nearest_distance,
+        "tanimoto_threshold": float(tanimoto_threshold),
+        "descriptor_distance_threshold": float(descriptor_threshold),
+        "descriptor_outliers": descriptor_outliers,
+        "warnings": warnings,
+        "neighbors": pd.DataFrame(neighbor_rows),
+    }
+
+
+def confidence_label(applicability: dict, model_std: float | None = None) -> str:
+    base = applicability.get("confidence", "unknown")
+    if model_std is not None and np.isfinite(model_std):
+        if model_std > 0.45:
+            return "low"
+        if model_std > 0.25 and base == "high":
+            return "medium"
+    return base
+
+
+def priority_score(prediction: float, applicability: dict, flags: dict, model_std: float | None = None) -> float:
+    potency = np.clip((prediction - 4.5) / 2.5, 0, 1) * 55
+    domain = 20 if applicability.get("in_domain") else 0
+    qed = 10 if not flags.get("low_qed") else 3
+    lipinski = 10 if flags.get("lipinski_pass") else 2
+    uncertainty = 5
+    if model_std is not None and np.isfinite(model_std):
+        uncertainty = max(0, 5 - (model_std * 8))
+    return float(np.clip(potency + domain + qed + lipinski + uncertainty, 0, 100))
 
 
 def molecule_image_bytes(smiles: str, size: tuple[int, int] = (560, 380)) -> io.BytesIO:
@@ -256,6 +555,8 @@ def generate_report_html(
     prediction: float,
     features: pd.DataFrame,
     shap_info: dict,
+    applicability: dict | None = None,
+    model_panel: pd.DataFrame | None = None,
 ) -> str:
     descriptor_table = features.loc[:, [col for col in DESCRIPTOR_COLUMNS if col in features.columns]]
     title = "QSAR prediction report"
@@ -272,13 +573,35 @@ def generate_report_html(
         f"<h2>Input SMILES</h2><p><code>{escaped_smiles}</code></p>",
         f"<h2>Predicted pIC50</h2><p>{prediction:.3f}</p>",
         f"<p>Estimated IC50: {pIC50_to_ic50_nm(prediction):,.2f} nM</p>",
+        f"<p>Predicted activity class: {activity_class(prediction)}</p>",
         "<h2>Molecular descriptors</h2>",
         descriptor_table.to_html(index=False),
     ]
 
+    if applicability and applicability.get("available"):
+        html_parts.append("<h2>Applicability domain</h2>")
+        html_parts.append(
+            "<p>"
+            f"In domain: {applicability.get('in_domain')}<br>"
+            f"Confidence: {html.escape(str(applicability.get('confidence')))}<br>"
+            f"Nearest Tanimoto similarity: {applicability.get('max_tanimoto_similarity', float('nan')):.3f}<br>"
+            f"Nearest descriptor distance: {applicability.get('nearest_descriptor_distance', float('nan')):.3f}"
+            "</p>"
+        )
+        neighbors = applicability.get("neighbors")
+        if isinstance(neighbors, pd.DataFrame) and not neighbors.empty:
+            html_parts.append("<h3>Nearest known training compounds</h3>")
+            html_parts.append(neighbors.to_html(index=False))
+
+    if isinstance(model_panel, pd.DataFrame) and not model_panel.empty:
+        html_parts.append("<h2>Model agreement</h2>")
+        html_parts.append(model_panel.to_html(index=False))
+
     importance = shap_info.get("importance")
     if isinstance(importance, pd.DataFrame) and not importance.empty:
         html_parts.append("<h2>Top SHAP feature importances</h2>")
+        if shap_info.get("model_used"):
+            html_parts.append(f"<p>Explanation model: {html.escape(str(shap_info['model_used']))}</p>")
         html_parts.append(importance.sort_values("mean_abs_shap", ascending=False).to_html(index=False))
     if "error" in shap_info:
         html_parts.append("<h2>SHAP note</h2>")
