@@ -162,7 +162,7 @@ def align_features_to_model(features: pd.DataFrame, model) -> pd.DataFrame:
     expected_count = getattr(model, "n_features_in_", None)
     if expected_count is not None and aligned.shape[1] != int(expected_count):
         raise ValueError(
-            f"Model expects {expected_count} features, but the app generated "
+            f"Model expects {expected_count} features, but the feature builder produced "
             f"{aligned.shape[1]}. Use a model trained with the repository feature schema."
         )
 

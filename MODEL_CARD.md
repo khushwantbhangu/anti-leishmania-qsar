@@ -41,9 +41,9 @@ The consensus ensemble is the default app model because it exposes model-agreeme
 
 Metrics are stored in `results/model_comparison_metrics.csv`.
 
-## Reproducibility environment
+## Software environment
 
-The shipped joblib artifacts were trained and validated with the pinned dependencies in `requirements.txt`, including scikit-learn 1.8.0. Keep these pins for deployment unless the model registry is regenerated with `scripts/train_model_registry.py`.
+The included joblib artifacts were trained and validated with the pinned dependencies in `requirements.txt`, including scikit-learn 1.8.0. Keep these pins for deployment unless the model registry is regenerated with `scripts/train_model_registry.py`.
 
 ## Applicability domain
 
@@ -54,7 +54,7 @@ The app reports two domain checks:
 
 The current thresholds are stored in `results/model_card.json` and `results/applicability_domain.joblib`. A prediction is flagged as lower confidence when structural similarity is low, descriptor distance is high, or descriptor values fall outside the central training distribution.
 
-## Researcher-facing outputs
+## Prediction outputs
 
 For each molecule, the app reports:
 

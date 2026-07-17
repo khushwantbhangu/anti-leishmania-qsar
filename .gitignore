@@ -23,7 +23,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Codex/local agent tooling
+# Local agent tooling
 .agents/
 
 # VS Code settings

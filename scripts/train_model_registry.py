@@ -105,7 +105,7 @@ def build_model_specs() -> dict:
         },
         "ridge": {
             "label": "Ridge regression",
-            "description": "Regularized linear baseline for publication comparison and failure-mode detection.",
+            "description": "Regularized linear baseline for comparison and failure-mode detection.",
             "estimator": make_pipeline(
                 StandardScaler(with_mean=False),
                 RidgeCV(alphas=np.logspace(-3, 3, 13)),

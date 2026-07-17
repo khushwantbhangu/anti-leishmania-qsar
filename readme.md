@@ -1,20 +1,20 @@
-# Interpretable QSAR framework for anti-leishmanial drug discovery
+# Anti-leishmania QSAR
 
-This repository contains a reproducible computational workflow and Streamlit application for predicting anti-leishmanial activity from molecular structure. The study combines ChEMBL-derived bioactivity curation, descriptor and Morgan fingerprint feature engineering, machine-learning model validation, activity-cliff analysis, scaffold analysis, and SHAP-based interpretation.
+This repository contains a QSAR workflow and Streamlit app for estimating anti-leishmanial activity from molecular structure. The workflow combines ChEMBL-derived bioactivity curation, molecular descriptors, Morgan fingerprints, regression models, applicability-domain checks, activity-cliff analysis, scaffold analysis, and SHAP interpretation.
 
-## Scientific aim
+## Aim
 
-Leishmaniasis remains a neglected tropical disease with limited therapeutic options. This project provides an interpretable QSAR workflow to help prioritize compounds with predicted anti-leishmanial activity and identify molecular features associated with potency.
+Leishmaniasis is a neglected tropical disease with limited therapeutic options. The goal of this project is to support early-stage compound prioritization by providing transparent model outputs rather than a single unqualified prediction.
 
 ## Repository structure
 
 ```text
-app/           Streamlit prediction app and reusable prediction utilities
+app/           Streamlit app and prediction utilities
 data/          Raw ChEMBL-derived inputs and processed modeling matrices
-figures/       Publication-ready figures
+figures/       Figures from exploratory analysis and validation
 notebooks/     Reproducible analysis notebooks, ordered by workflow stage
 results/       Model registry, trained models, validation outputs, and analysis tables
-manuscript/    Manuscript-facing notes and supplementary-material placeholders
+manuscript/    Manuscript notes and supplementary-material files
 ```
 
 ## Reproducible workflow
@@ -51,9 +51,9 @@ streamlit run app/streamlit_app.py
 
 On Windows, `run_app.bat` creates `.venv` if needed, installs dependencies, and starts the Streamlit app.
 
-## Research app features
+## App features
 
-The Streamlit app is designed for practical screening work:
+The Streamlit app supports:
 
 - single-compound prediction with pIC50 and estimated IC50
 - batch CSV screening and ranked candidate export
@@ -63,21 +63,21 @@ The Streamlit app is designed for practical screening work:
 - model spread / approximate prediction interval
 - drug-likeness and descriptor flags
 - SHAP-based feature interpretation
-- publication-facing model evidence view
+- model evidence view
 
 ## Data and model artifacts
 
-The processed feature matrices are retained to support direct model reproduction. The app uses `results/model_registry.joblib` and `results/applicability_domain.joblib` when available. `results/model.joblib` stores the best single model for legacy compatibility.
+The processed feature matrices are included to support model reproduction. The app uses `results/model_registry.joblib` and `results/applicability_domain.joblib` when available. `results/model.joblib` stores the best single model for compatibility with older workflows.
 
 See `MODEL_CARD.md` for model details, validation metrics, intended use, and limitations.
 
-## Web availability
+## Deployment
 
-See `DEPLOYMENT.md` for public deployment options. The recommended route is Streamlit Community Cloud using this GitHub repository and `app/streamlit_app.py` as the entry point. Hugging Face Spaces is a good alternative for broad researcher access.
+See `DEPLOYMENT.md` for deployment notes. The Streamlit entry point is `app/streamlit_app.py`.
 
 ## Citation
 
-Please cite the accompanying manuscript and this repository using `CITATION.cff`. Before public release, update the repository URL and archive a tagged release with Zenodo to obtain a DOI.
+Please cite the accompanying manuscript and this repository using `CITATION.cff`. For a citable software release, archive a tagged GitHub release with Zenodo and add the DOI to `CITATION.cff`.
 
 ## License
 
