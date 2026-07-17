@@ -6,7 +6,6 @@ import json
 import contextlib
 from functools import lru_cache
 from pathlib import Path
-from typing import BinaryIO
 
 import joblib
 import numpy as np
@@ -175,15 +174,7 @@ def assemble_features_for_model(smiles: str, model) -> pd.DataFrame:
     return align_features_to_model(features, model)
 
 
-def load_model(
-    model_path: str | Path | None = None,
-    uploaded_model: bytes | BinaryIO | None = None,
-):
-    if uploaded_model is not None:
-        if isinstance(uploaded_model, bytes):
-            return joblib.load(io.BytesIO(uploaded_model))
-        return joblib.load(uploaded_model)
-
+def load_model(model_path: str | Path | None = None):
     root = _project_root()
     fallback = root / "results" / "model.joblib"
 

@@ -2,6 +2,14 @@
 
 This repository contains a QSAR workflow and Streamlit app for estimating anti-leishmanial activity from molecular structure. The workflow combines ChEMBL-derived bioactivity curation, molecular descriptors, Morgan fingerprints, regression models, applicability-domain checks, activity-cliff analysis, scaffold analysis, and SHAP interpretation.
 
+## Web app
+
+Use the app here:
+
+https://anti-leishmania-qsar-f26lzfytm944qspa6db8ma.streamlit.app/
+
+The app supports single-compound prediction and batch screening from a CSV file with a `smiles` column. See `USAGE.md` for input format, example SMILES strings, and output interpretation.
+
 ## Aim
 
 Leishmaniasis is a neglected tropical disease with limited therapeutic options. The goal of this project is to support early-stage compound prioritization by providing transparent model outputs rather than a single unqualified prediction.
@@ -16,6 +24,20 @@ notebooks/     Reproducible analysis notebooks, ordered by workflow stage
 results/       Model registry, trained models, validation outputs, and analysis tables
 manuscript/    Manuscript notes and supplementary-material files
 ```
+
+## App outputs
+
+For each molecule, the app reports:
+
+- predicted pIC50 and estimated IC50
+- activity class
+- confidence label
+- applicability-domain status
+- nearest known training analogs
+- model agreement and model spread
+- drug-likeness and descriptor flags
+- SHAP-based feature interpretation
+- screening priority score
 
 ## Reproducible workflow
 
@@ -33,51 +55,15 @@ Run notebooks in numerical order:
 10. `notebooks/10_y_randomization_validation.ipynb`
 11. `notebooks/11_predict_new_compounds.ipynb`
 
-## Installation
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-## Run the prediction app
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-On Windows, `run_app.bat` creates `.venv` if needed, installs dependencies, and starts the Streamlit app.
-
-## App features
-
-The Streamlit app supports:
-
-- single-compound prediction with pIC50 and estimated IC50
-- batch CSV screening and ranked candidate export
-- consensus and individual model predictions
-- applicability-domain checks
-- nearest known training analogs
-- model spread / approximate prediction interval
-- drug-likeness and descriptor flags
-- SHAP-based feature interpretation
-- model evidence view
-
 ## Data and model artifacts
 
 The processed feature matrices are included to support model reproduction. The app uses `results/model_registry.joblib` and `results/applicability_domain.joblib` when available. `results/model.joblib` stores the best single model for compatibility with older workflows.
 
 See `MODEL_CARD.md` for model details, validation metrics, intended use, and limitations.
 
-## Deployment
-
-See `DEPLOYMENT.md` for deployment notes. The Streamlit entry point is `app/streamlit_app.py`.
-
 ## Citation
 
-Please cite the accompanying manuscript and this repository using `CITATION.cff`. For a citable software release, archive a tagged GitHub release with Zenodo and add the DOI to `CITATION.cff`.
+Please cite the accompanying manuscript and this repository using `CITATION.cff`. A DOI can be added to the citation file when available.
 
 ## License
 

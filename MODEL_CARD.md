@@ -43,7 +43,7 @@ Metrics are stored in `results/model_comparison_metrics.csv`.
 
 ## Software environment
 
-The included joblib artifacts were trained and validated with the pinned dependencies in `requirements.txt`, including scikit-learn 1.8.0. Keep these pins for deployment unless the model registry is regenerated with `scripts/train_model_registry.py`.
+The included joblib artifacts were trained and validated with the pinned dependencies in `requirements.txt`, including scikit-learn 1.8.0. Use these pins when reproducing predictions unless the model registry is regenerated with `scripts/train_model_registry.py`.
 
 ## Applicability domain
 

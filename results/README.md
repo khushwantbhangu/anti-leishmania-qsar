@@ -12,5 +12,3 @@ This directory stores reusable model and analysis outputs.
 - `scaffold_activity_summary.csv`: scaffold-level activity summary.
 - `y_randomization_scores.csv`: Y-randomization validation scores.
 - PNG files: result plots used for review, reporting, or app documentation.
-
-For public releases, consider archiving large model/data artifacts with Zenodo if the repository grows beyond ordinary GitHub limits.

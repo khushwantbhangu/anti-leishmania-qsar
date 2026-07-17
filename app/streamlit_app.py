@@ -27,7 +27,6 @@ from app.utils import (  # noqa: E402
     generate_report_html,
     html_bytesio,
     load_applicability_domain,
-    load_model,
     load_model_card,
     load_model_comparison,
     load_model_registry,
@@ -44,7 +43,6 @@ from app.utils import (  # noqa: E402
 )
 
 
-DEFAULT_MODEL_PATH = ROOT / "results" / "model.joblib"
 EXAMPLE_SMILES = "CCOC(=O)C1=CC=CC=C1"
 
 
@@ -63,16 +61,6 @@ def get_registry():
 @st.cache_resource(show_spinner=False)
 def get_applicability_domain():
     return load_applicability_domain()
-
-
-@st.cache_resource(show_spinner=False)
-def get_model_from_path(model_path: str):
-    return load_model(model_path)
-
-
-@st.cache_resource(show_spinner=False, max_entries=3)
-def get_model_from_bytes(model_bytes: bytes):
-    return load_model(uploaded_model=io.BytesIO(model_bytes))
 
 
 @st.cache_data(ttl="30m", max_entries=8, show_spinner=False)
@@ -97,12 +85,10 @@ def initialize_state() -> None:
     st.session_state.setdefault("batch_result", None)
 
 
-def active_model(registry: dict | None, model_key: str, model_path: str, model_file):
-    if model_file is not None:
-        return get_model_from_bytes(model_file.getvalue()), model_file.name, None
-    if registry:
-        return estimator_from_registry(registry, model_key), model_options(registry)[model_key], model_key
-    return get_model_from_path(model_path), model_path, None
+def active_model(registry: dict | None, model_key: str | None):
+    if not registry or not model_key:
+        raise ValueError("Model registry is not available.")
+    return estimator_from_registry(registry, model_key), model_options(registry)[model_key], model_key
 
 
 def render_shap_chart(shap_info: dict) -> None:
@@ -202,7 +188,7 @@ def render_neighbors(applicability: dict) -> None:
 
 def render_model_panel(model_panel: pd.DataFrame) -> None:
     if model_panel is None or model_panel.empty:
-        st.info("Model agreement data is not available for uploaded legacy models.", icon=":material/info:")
+        st.info("Model agreement data is not available.", icon=":material/info:")
         return
 
     st.dataframe(
@@ -486,10 +472,7 @@ with st.sidebar:
         )
     else:
         model_key = None
-        st.warning("Model registry not found; using legacy model path.", icon=":material/warning:")
-
-    model_path = st.text_input("Legacy model path", value=str(DEFAULT_MODEL_PATH))
-    model_file = st.file_uploader("Upload trained model", type=["joblib", "pkl"])
+        st.error("Model registry was not found.", icon=":material/error:")
 
     st.header("Research settings")
     top_k = st.slider("Top SHAP features", min_value=5, max_value=40, value=18, step=1)
@@ -505,7 +488,7 @@ with st.sidebar:
 st.title("Anti-leishmania QSAR research tool")
 st.caption(
     "Multi-model activity prediction with applicability-domain checks, nearest-neighbor context, "
-    "model agreement, and researcher-ready screening exports."
+    "model agreement, and screening exports."
 )
 
 mode = st.segmented_control(
@@ -530,11 +513,11 @@ if mode == "Single compound":
     if submitted:
         try:
             with st.spinner("Generating model, domain, and analog evidence..."):
-                model, model_label, active_key = active_model(registry, model_key, model_path, model_file)
+                model, model_label, active_key = active_model(registry, model_key)
                 result = run_single_prediction(
                     smiles_input,
                     model,
-                    registry if model_file is None else None,
+                    registry,
                     active_key,
                     applicability_domain,
                     top_k,
@@ -562,12 +545,12 @@ elif mode == "Batch screening":
     if submitted:
         try:
             with st.spinner("Screening compound library..."):
-                model, _, active_key = active_model(registry, model_key, model_path, model_file)
+                model, _, active_key = active_model(registry, model_key)
                 batch_df = read_batch_input(uploaded, csv_url)
                 st.session_state.batch_result = run_batch_predictions(
                     batch_df,
                     model,
-                    registry if model_file is None else None,
+                    registry,
                     active_key,
                     applicability_domain,
                 )
