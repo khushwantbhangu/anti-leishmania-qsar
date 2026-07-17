@@ -14,7 +14,6 @@ import pandas as pd
 import shap
 from rdkit import Chem
 from rdkit.Chem import Descriptors, Lipinski, QED, rdFingerprintGenerator, rdMolDescriptors
-from rdkit.Chem import Draw
 from rdkit.Contrib.NP_Score import npscorer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -543,6 +542,8 @@ def priority_score(prediction: float, applicability: dict, flags: dict, model_st
 
 def molecule_image_bytes(smiles: str, size: tuple[int, int] = (560, 380)) -> io.BytesIO:
     _, mol = parse_smiles(smiles)
+    from rdkit.Chem import Draw
+
     image = Draw.MolToImage(mol, size=size)
     output = io.BytesIO()
     image.save(output, format="PNG")
