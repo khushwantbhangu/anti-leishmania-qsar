@@ -64,7 +64,9 @@ See `MODEL_CARD.md` for model details, validation metrics, intended use, and lim
 
 ## Citation
 
-Please cite the accompanying manuscript and this repository using `CITATION.cff`. A DOI can be added to the citation file when available.
+If you use this project in your research, please cite the accompanying manuscript and this repository. Citation information is available in the `CITATION.cff` file.
+
+**DOI:** https://doi.org/10.5281/zenodo.21418535
 
 ## License
 
